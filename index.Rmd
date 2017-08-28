@@ -1,0 +1,83 @@
+---
+title: "Practical Machine Learning Project"
+author: "Lian Yang"
+date: "August 28, 2017"
+output: html_document
+---
+Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+Project Goal
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+Read the Data
+
+Read the training and testing data into work directory.In the training set, there are 19622 observations with 160 metrics, while in testing data set, there are 20 observations.
+```{r}
+set.seed(1234)
+train <- read.csv('C:/Users/lyang6/Documents/pml-training.csv',na.strings=c("NA","#DIV/0!",""))
+test <- read.csv('C:/Users/lyang6/Documents/pml-testing.csv',na.strings=c("NA","#DIV/0!",""))
+dim(train)
+dim(test)
+table(train$classe)
+
+library(caret)
+library(randomForest)
+library(rpart) 
+library(rpart.plot)
+```
+
+Cross-validation Method
+
+Cross validation will be performed by subsetting the orginal training data into two sets: sub-training set (60% of original training data) and sub-testing set(40% of original testing data). I will build the model in the sub-training set, and test it in the sub-testing data. Once the best model is built, I will then test the final model on the original testing data.
+```{r}
+inTrain <- createDataPartition(y=train$classe, p=0.6, list=FALSE)
+sub_train <- train[inTrain, ]
+sub_test<- train[-inTrain, ]
+dim(sub_train); dim(sub_test)
+```
+
+Preprocess the data
+
+It is obvious that the first seven columns are irrelevant with predicting, so I remove them. Also I removed  columns with NA, leaving around 60 variables for predicting.
+```{r}
+sub_train <- sub_train[, colSums(is.na(sub_train)) == 0] 
+sub_test <- sub_test[, colSums(is.na(sub_test)) == 0] 
+test<-test[,colSums(is.na(test))==0]
+sub_train<- sub_train[,-c(1:7)]
+sub_test<- sub_test[,-c(1:7)]
+test<-test[,-c(1:7)]
+```
+
+Using Decision Tree for predicting
+
+Build the decision tree and view the confusion matrix to test results
+```{r}
+modFitA1 <- rpart(classe ~ ., data=sub_train, method="class")
+predictionsA1 <- predict(modFitA1, sub_test, type = "class")
+confusionMatrix(predictionsA1, sub_test$classe)
+```
+
+Using Random Forests for predicting
+
+```{r}
+modFitB1 <- randomForest(classe ~. , data=sub_train)
+predictionsB1 <- predict(modFitB1, sub_test, type = "class")
+confusionMatrix(predictionsB1, sub_test$classe)
+```
+Based on the results above, Random Forests yiels better accuracy.
+
+
+Prediction for the original test data set
+
+Apply the best model which was just built on the original test to predict the class
+```{r}
+final_result <- predict(modFitB1, test)
+
+final_result
+```
+
+
+
